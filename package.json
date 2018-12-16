@@ -1,4 +1,9 @@
 {
+  "name": "adonis_astria_starter",
+  "main": "src/index.js",
+  "version": "0.0.1",
+  "author": "Cobaltway",
+  "license": "MIT",
   "dependencies": {
     "klaw": "^3.0.0"
   },
