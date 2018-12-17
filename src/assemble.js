@@ -12,8 +12,15 @@ module.exports = (path, mixins) => {
     })
   }
 
+  const queryKeys = Object.keys(page.query || {});
+  ['query', 'params'].forEach(field => {
+    if (page[field]) {
+      Object.keys(page[field]).forEach((key) => !page[field][key] && delete page[field][key])
+    }
+  })
+
   return {
-    middlewares: page.middlewares,
+    middlewares: page.middlewares || [],
     clojure: async (...originals) => {
       const { request, params, auth, response } = originals[0]
 
@@ -24,7 +31,7 @@ module.exports = (path, mixins) => {
         })
       }
 
-      const query = request.all()
+      const query = request.only(queryKeys)
       const input = { params, query }
 
       // Validate and sanitize params and query
