@@ -37,13 +37,15 @@ module.exports = (path, mixins) => {
       // Validate and sanitize params and query
       await Promise.all(['query', 'params'].map(async field => {
         if (page[field]) {
-          const validation = await validate(input[field], page[field])
-          if (validation.fails()) {
-            if (!page[field + 'Error']) throw new Error('BAD_' + field.toUpperCase() + '\n' + validation.messages().map(v => v.message).join('\n'))
-            if (typeof page[field + 'Error'] === 'object') throw page[field + 'Error']
-            if (typeof page[field + 'Error'] === 'function') return page[field + 'Error']({ query, params, auth, originals, validation })
+          if (page[field][0]) {
+            const validation = await validate(input[field], page[field])
+            if (validation.fails()) {
+              if (!page[field + 'Error']) throw new Error('BAD_' + field.toUpperCase() + '\n' + validation.messages().map(v => v.message).join('\n'))
+              if (typeof page[field + 'Error'] === 'object') throw page[field + 'Error']
+              if (typeof page[field + 'Error'] === 'function') return page[field + 'Error']({ query, params, auth, originals, validation })
+            }
           }
-          input[field] = sanitize(input[field], page[field])
+          if (page[field][1]) input[field] = sanitize(input[field], page[field])
         }
       }))
 
