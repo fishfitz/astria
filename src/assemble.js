@@ -39,7 +39,7 @@ module.exports = (path, mixins) => {
         if (page[field]) {
           const validation = await validate(input[field], page[field])
           if (validation.fails()) {
-            if (!page[field + 'Error']) throw new Error('BAD_' + field.toUpperCase())
+            if (!page[field + 'Error']) throw new Error('BAD_' + field.toUpperCase() + '\n' + validation.messages().map(v => v.message).join('\n'))
             if (typeof page[field + 'Error'] === 'object') throw page[field + 'Error']
             if (typeof page[field + 'Error'] === 'function') return page[field + 'Error']({ query, params, auth, originals, validation })
           }
