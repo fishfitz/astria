@@ -37,7 +37,7 @@ module.exports = async (pageFolder = 'App/Pages', mixinsFolder = 'App/Mixins') =
 
     let route = '/' + path.join(
       path.dirname(path.relative(path.join(Helpers.appRoot(), pageFolder), p)),
-      filename.join().replace(/\.[^/.]+$/, '').replace(/_(.+)/g, ':$1?')
+      filename.join().replace(/\.[^/.]+$/, '').replace(/_([^_/]+)/g, ':$1?/')
     ).replace(/\\/g, '/').replace(/_([^/]+)/g, ':$1')
 
     const { clojure, middlewares } = assemble(p, mixinsMap)
