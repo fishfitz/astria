@@ -25,12 +25,12 @@ module.exports = async (pagesFolder = 'App/Pages', mixinsFolder = 'App/Mixins', 
   const validationsRules = await collect(path.join(rulesFolder, 'Validation'))
   validationsRules.forEach(v => {
     validations[path.basename(v).replace(path.extname(v), '')] = require(v)
-  });
+  })
   const sanitizationRules = await collect(path.join(rulesFolder, 'Sanitization'))
   sanitizationRules.forEach(s => {
     sanitizor[path.basename(s).replace(path.extname(s), '')] = require(s)
-  });
-  
+  })
+
   const mixins = await collect(mixinsFolder)
   const mixinsMap = {}
   mixins.forEach(m => {
