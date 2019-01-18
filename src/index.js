@@ -38,6 +38,7 @@ module.exports = async (pagesFolder = 'App/Pages', mixinsFolder = 'App/Mixins', 
   })
 
   const pages = await collect(pagesFolder)
+  const wildcard = []
   pages.forEach(p => {
     let [methods, ...filename] = path.basename(p).split('$')
     if (!filename.length) {
@@ -51,9 +52,12 @@ module.exports = async (pagesFolder = 'App/Pages', mixinsFolder = 'App/Mixins', 
     ).replace(/\\/g, '/').replace(/_([^/]+)/g, ':$1')
 
     const { clojure, middlewares } = assemble(p, mixinsMap)
-    if (route === '/#') route = '*'
+    if (route === '/#') return wildcard.push({ clojure, methods, middlewares })
     Route
       .route(route, clojure, methods.toUpperCase().split(','))
       .middleware(middlewares)
   })
+  wildcard.forEach((w) => Route
+    .route('*', w.clojure, w.methods.toUpperCase().split(','))
+    .middleware(w.middlewares))
 }
