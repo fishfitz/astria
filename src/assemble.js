@@ -1,5 +1,6 @@
 const { validate, sanitize } = use('Validator')
 const merge = require('./mergeMixins')
+const { mapValues, pickBy } = use('lodash')
 
 module.exports = (path, mixins) => {
   let page = require(path)
@@ -19,6 +20,16 @@ module.exports = (path, mixins) => {
     }
   })
 
+  const validationRules = {
+    params: page.params ? pickBy(mapValues(page.params, 0), Boolean) : undefined,
+    query: page.query ? pickBy(mapValues(page.query, 0), Boolean) : undefined
+  }
+
+  const sanitizationRules = {
+    params: page.params ? pickBy(mapValues(page.params, 1), Boolean) : undefined,
+    query: page.query ? pickBy(mapValues(page.query, 1), Boolean) : undefined
+  }
+
   return {
     middlewares: page.middlewares || [],
     clojure: async (...originals) => {
@@ -37,15 +48,22 @@ module.exports = (path, mixins) => {
       // Validate and sanitize params and query
       await Promise.all(['query', 'params'].map(async field => {
         if (page[field]) {
-          if (page[field][0]) {
-            const validation = await validate(input[field], page[field])
+          if (validationRules[field]) {
+            const validation = await validate(input[field], validationRules[field])
             if (validation.fails()) {
-              if (!page[field + 'Error']) throw new Error('BAD_' + field.toUpperCase() + '\n' + validation.messages().map(v => v.message).join('\n'))
+              if (!page[field + 'Error']) {
+                throw new Error('BAD_' +
+                  field.toUpperCase() +
+                  '\n' +
+                  (validation.messages() || []).map(v => v.message).join('\n'))
+              }
               if (typeof page[field + 'Error'] === 'object') throw page[field + 'Error']
               if (typeof page[field + 'Error'] === 'function') return page[field + 'Error']({ query, params, auth, originals, validation })
             }
           }
-          if (page[field][1]) input[field] = sanitize(input[field], page[field])
+          if (sanitizationRules[field]) {
+            Object.assign(input[field], sanitize(input[field], sanitizationRules[field]))
+          }
         }
       }))
 

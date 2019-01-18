@@ -5,7 +5,8 @@
   "author": "Cobaltway",
   "license": "MIT",
   "dependencies": {
-    "klaw": "^3.0.0"
+    "klaw": "^3.0.0",
+    "lodash": "^4.17.11"
   },
   "devDependencies": {
     "eslint": "^5.9.0",
