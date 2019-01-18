@@ -3,6 +3,7 @@ const path = require('path')
 const klaw = require('klaw')
 const Helpers = use('Helpers')
 const Route = use('Route')
+const { validations, sanitizor } = use('Validator')
 
 const collect = (folder) => {
   const items = []
@@ -20,14 +21,23 @@ const collect = (folder) => {
   })
 }
 
-module.exports = async (pageFolder = 'App/Pages', mixinsFolder = 'App/Mixins') => {
+module.exports = async (pagesFolder = 'App/Pages', mixinsFolder = 'App/Mixins', rulesFolder = 'App/Rules') => {
+  const validationsRules = await collect(path.join(rulesFolder, 'Validation'))
+  validationsRules.forEach(v => {
+    validations[path.basename(v).replace(path.extname(v), '')] = require(v)
+  });
+  const sanitizationRules = await collect(path.join(rulesFolder, 'Sanitization'))
+  sanitizationRules.forEach(s => {
+    sanitizor[path.basename(s).replace(path.extname(s), '')] = require(s)
+  });
+  
   const mixins = await collect(mixinsFolder)
   const mixinsMap = {}
   mixins.forEach(m => {
     mixinsMap[path.dirname(path.relative(Helpers.appRoot(), m)).replace(/\\/g, '/')] = require(m)
   })
 
-  const pages = await collect(pageFolder)
+  const pages = await collect(pagesFolder)
   pages.forEach(p => {
     let [methods, ...filename] = path.basename(p).split('$')
     if (!filename.length) {
@@ -36,7 +46,7 @@ module.exports = async (pageFolder = 'App/Pages', mixinsFolder = 'App/Mixins') =
     }
 
     let route = '/' + path.join(
-      path.dirname(path.relative(path.join(Helpers.appRoot(), pageFolder), p)),
+      path.dirname(path.relative(path.join(Helpers.appRoot(), pagesFolder), p)),
       filename.join().replace(/\.[^/.]+$/, '').replace(/_([^_/]+)/g, ':$1?/')
     ).replace(/\\/g, '/').replace(/_([^/]+)/g, ':$1')
 
