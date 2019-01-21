@@ -1,90 +1,63 @@
-const { validate, sanitize } = use('Validator')
-const merge = require('./mergeMixins')
-const { mapValues, pickBy } = use('lodash')
+const assemble = require('./assemble')
+const path = require('path')
+const klaw = require('klaw')
+const Helpers = use('Helpers')
+const Route = use('Route')
+const { validations, sanitizor } = use('Validator')
 
-module.exports = (path, mixins) => {
-  let page = require(path)
+const collect = (folder) => {
+  const items = []
 
-  // Merge mixins
-  if (page.mixins) {
-    if (!Array.isArray(page.mixins)) page.mixins = [page.mixins]
-    page.mixins.forEach(m => {
-      page = merge(page, mixins(m))
-    })
-  }
+  return new Promise((resolve, reject) => {
+    klaw(path.relative(Helpers.appRoot(), folder))
+      .on('data', item => !item.stats.isDirectory() && items.push(item.path))
+      .on('end', () => {
+        resolve(items)
+      })
+      .on('error', (e) => {
+        console.log(e)
+        resolve(items)
+      })
+  })
+}
 
-  const queryKeys = Object.keys(page.query || {});
-  ['query', 'params'].forEach(field => {
-    if (page[field]) {
-      Object.keys(page[field]).forEach((key) => !page[field][key] && delete page[field][key])
-    }
+module.exports = async (pagesFolder = 'App/Pages', mixinsFolder = 'App/Mixins', rulesFolder = 'App/Rules') => {
+  const validationsRules = await collect(path.join(rulesFolder, 'Validation'))
+  validationsRules.forEach(v => {
+    validations[path.basename(v).replace(path.extname(v), '')] = require(v)
+  })
+  const sanitizationRules = await collect(path.join(rulesFolder, 'Sanitization'))
+  sanitizationRules.forEach(s => {
+    sanitizor[path.basename(s).replace(path.extname(s), '')] = require(s)
   })
 
-  const validationRules = {
-    params: page.params ? pickBy(mapValues(page.params, 0), Boolean) : undefined,
-    query: page.query ? pickBy(mapValues(page.query, 0), Boolean) : undefined
-  }
+  const mixins = await collect(mixinsFolder)
+  const mixinsMap = {}
+  mixins.forEach(m => {
+    mixinsMap[path.dirname(path.relative(Helpers.appRoot(), m)).replace(/\\/g, '/')] = require(m)
+  })
 
-  const sanitizationRules = {
-    params: page.params ? pickBy(mapValues(page.params, 1), Boolean) : undefined,
-    query: page.query ? pickBy(mapValues(page.query, 1), Boolean) : undefined
-  }
-
-  return {
-    middlewares: page.middlewares || [],
-    clojure: async (...originals) => {
-      const { request, params, auth, response } = originals[0]
-
-      // Set headers
-      if (page.headers) {
-        Object.keys(page.headers).forEach(key => {
-          response.header(key, page.headers[key])
-        })
-      }
-
-      const query = request.only(queryKeys)
-      const input = { params, query }
-
-      // Validate and sanitize params and query
-      await Promise.all(['query', 'params'].map(async field => {
-        if (page[field]) {
-          if (validationRules[field]) {
-            const validation = await validate(input[field], validationRules[field])
-            if (validation.fails()) {
-              if (!page[field + 'Error']) {
-                throw new Error('BAD_' +
-                  field.toUpperCase() +
-                  '\n' +
-                  (validation.messages() || []).map(v => v.message).join('\n'))
-              }
-              if (typeof page[field + 'Error'] === 'object') throw page[field + 'Error']
-              if (typeof page[field + 'Error'] === 'function') return page[field + 'Error']({ query, params, auth, originals, validation })
-            }
-          }
-          if (sanitizationRules[field]) {
-            console.log(input[field], sanitize(input[field], sanitizationRules[field]))
-            input[field] = sanitize(input[field], sanitizationRules[field])
-          }
-        }
-      }))
-
-      // Validate and fetch files
-      const files = []
-      if (page.files) {
-        Object.keys(page.files).forEach(key => {
-          files.push(request.file(key, page.files[key]))
-        })
-      }
-
-      return page.handle({
-        query,
-        params,
-        auth,
-        files,
-        request,
-        response,
-        originals
-      })
+  const pages = await collect(pagesFolder)
+  const wildcard = []
+  pages.forEach(p => {
+    let [methods, ...filename] = path.basename(p).split('$')
+    if (!filename.length) {
+      filename = [methods]
+      methods = 'HEAD,GET'
     }
-  }
+
+    let route = '/' + path.join(
+      path.dirname(path.relative(path.join(Helpers.appRoot(), pagesFolder), p)),
+      filename.join().replace(/\.[^/.]+$/, '').replace(/_([^_/]+)/g, '/:$1?/')
+    ).replace(/\\/g, '/').replace(/_([^/]+)/g, ':$1')
+
+    const { clojure, middlewares } = assemble(p, mixinsMap)
+    if (route === '/#') return wildcard.push({ clojure, methods, middlewares })
+    Route
+      .route(route, clojure, methods.toUpperCase().split(','))
+      .middleware(middlewares)
+  })
+  wildcard.forEach((w) => Route
+    .route('*', w.clojure, w.methods.toUpperCase().split(','))
+    .middleware(w.middlewares))
 }
