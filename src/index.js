@@ -15,13 +15,12 @@ const collect = (folder) => {
         resolve(items)
       })
       .on('error', (e) => {
-        console.log(e)
         resolve(items)
       })
   })
 }
 
-module.exports = async (pagesFolder = 'App/Pages', mixinsFolder = 'App/Mixins', rulesFolder = 'App/Rules') => {
+module.exports = async ({ pagesFolder = 'App/Pages', mixinsFolder = 'App/Mixins', rulesFolder = 'App/Rules', action }) => {
   const validationsRules = await collect(path.join(rulesFolder, 'Validation'))
   validationsRules.forEach(v => {
     validations[path.basename(v).replace(path.extname(v), '')] = require(v)
@@ -38,6 +37,7 @@ module.exports = async (pagesFolder = 'App/Pages', mixinsFolder = 'App/Mixins', 
   })
 
   const pages = await collect(pagesFolder)
+  const routes = []
   const wildcard = []
   pages.forEach(p => {
     let [methods, ...filename] = path.basename(p).split('$')
@@ -52,12 +52,16 @@ module.exports = async (pagesFolder = 'App/Pages', mixinsFolder = 'App/Mixins', 
     ).replace(/\\/g, '/').replace(/_([^/]+)/g, ':$1')
 
     const { clojure, middlewares } = assemble(p, mixinsMap)
-    if (route === '/#') return wildcard.push({ clojure, methods, middlewares })
-    Route
-      .route(route, clojure, methods.toUpperCase().split(','))
-      .middleware(middlewares)
+    if (route === '/#') wildcard.push({ route: '*', clojure, methods, middlewares })
+    else routes.push({ route, clojure, methods, middlewares })
   })
-  wildcard.forEach((w) => Route
-    .route('*', w.clojure, w.methods.toUpperCase().split(','))
-    .middleware(w.middlewares))
+  if (!action) {
+    action = ({ route, clojure, methods, middlewares }) => {
+      Route
+        .route(route, clojure, methods.toUpperCase().split(','))
+        .middleware(middlewares)
+    }
+  }
+  routes.forEach(action)
+  wildcard.forEach(action)
 }

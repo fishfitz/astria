@@ -1,6 +1,6 @@
-const { validate, sanitize } = use('Validator')
+const { validate, sanitize, sanitizor } = use('Validator')
 const merge = require('./mergeMixins')
-const { mapValues, pickBy } = use('lodash')
+const { mapValues, pickBy, camelCase } = use('lodash')
 
 module.exports = (path, mixins) => {
   let page = require(path)
@@ -28,6 +28,11 @@ module.exports = (path, mixins) => {
   const sanitizationRules = {
     params: page.params ? pickBy(mapValues(page.params, 1), Boolean) : undefined,
     query: page.query ? pickBy(mapValues(page.query, 1), Boolean) : undefined
+  }
+
+  const defaults = {
+    params: page.params ? pickBy(mapValues(page.params, 2), Boolean) : undefined,
+    query: page.query ? pickBy(mapValues(page.query, 2), Boolean) : undefined
   }
 
   return {
@@ -64,14 +69,21 @@ module.exports = (path, mixins) => {
           if (sanitizationRules[field]) {
             Object.assign(input[field], sanitize(input[field], sanitizationRules[field]))
           }
+          if (defaults[field]) {
+            Object.keys(defaults[field]).forEach(k => {
+              if (typeof input[field][k] === 'undefined') {
+                input[field][k] = sanitizor[camelCase(defaults[field][k])]()
+              }
+            })
+          }
         }
       }))
 
       // Validate and fetch files
-      const files = []
+      const files = {}
       if (page.files) {
         Object.keys(page.files).forEach(key => {
-          files.push(request.file(key, page.files[key]))
+          files[key] = request.file(key, page.files[key])
         })
       }
 
