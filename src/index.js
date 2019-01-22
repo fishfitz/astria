@@ -20,48 +20,58 @@ const collect = (folder) => {
   })
 }
 
-module.exports = async ({ pagesFolder = 'App/Pages', mixinsFolder = 'App/Mixins', rulesFolder = 'App/Rules', action }) => {
-  const validationsRules = await collect(path.join(rulesFolder, 'Validation'))
-  validationsRules.forEach(v => {
-    validations[path.basename(v).replace(path.extname(v), '')] = require(v)
-  })
-  const sanitizationRules = await collect(path.join(rulesFolder, 'Sanitization'))
-  sanitizationRules.forEach(s => {
-    sanitizor[path.basename(s).replace(path.extname(s), '')] = require(s)
-  })
+let astriaRoutes
+module.exports = {
+  async init ({ pagesFolder = 'App/Pages', mixinsFolder = 'App/Mixins', rulesFolder = 'App/Rules', action } = {}) {
+    const validationsRules = await collect(path.join(rulesFolder, 'Validation'))
+    validationsRules.forEach(v => {
+      validations[path.basename(v).replace(path.extname(v), '')] = require(v)
+    })
+    const sanitizationRules = await collect(path.join(rulesFolder, 'Sanitization'))
+    sanitizationRules.forEach(s => {
+      sanitizor[path.basename(s).replace(path.extname(s), '')] = require(s)
+    })
 
-  const mixins = await collect(mixinsFolder)
-  const mixinsMap = {}
-  mixins.forEach(m => {
-    mixinsMap[path.dirname(path.relative(Helpers.appRoot(), m)).replace(/\\/g, '/')] = require(m)
-  })
+    const mixins = await collect(mixinsFolder)
+    const mixinsMap = {}
+    mixins.forEach(m => {
+      mixinsMap[path.dirname(path.relative(Helpers.appRoot(), m)).replace(/\\/g, '/')] = require(m)
+    })
 
-  const pages = await collect(pagesFolder)
-  const routes = []
-  const wildcard = []
-  pages.forEach(p => {
-    let [methods, ...filename] = path.basename(p).split('$')
-    if (!filename.length) {
-      filename = [methods]
-      methods = 'HEAD,GET'
+    const pages = await collect(pagesFolder)
+    const routes = []
+    const wildcard = []
+    pages.forEach(p => {
+      let [methods, ...filename] = path.basename(p).split('$')
+      if (!filename.length) {
+        filename = [methods]
+        methods = 'HEAD,GET'
+      }
+
+      methods = methods.toUpperCase().split(',')
+
+      let route = '/' + path.join(
+        path.dirname(path.relative(path.join(Helpers.appRoot(), pagesFolder), p)),
+        filename.join().replace(/\.[^/.]+$/, '').replace(/_([^_/]+)/g, '/:$1?/')
+      ).replace(/\\/g, '/').replace(/_([^/]+)/g, ':$1')
+
+      const page = assemble(p, mixinsMap)
+      if (route === '/#') wildcard.push({ route: '*', methods, ...page })
+      else routes.push({ route, methods, ...page })
+    })
+    if (!action) {
+      action = (page) => {
+        Route
+          .route(page.route, page.clojure, page.methods)
+          .middleware(page.middlewares)
+      }
     }
+    routes.forEach(action)
+    wildcard.forEach(action)
 
-    let route = '/' + path.join(
-      path.dirname(path.relative(path.join(Helpers.appRoot(), pagesFolder), p)),
-      filename.join().replace(/\.[^/.]+$/, '').replace(/_([^_/]+)/g, '/:$1?/')
-    ).replace(/\\/g, '/').replace(/_([^/]+)/g, ':$1')
-
-    const { clojure, middlewares } = assemble(p, mixinsMap)
-    if (route === '/#') wildcard.push({ route: '*', clojure, methods, middlewares })
-    else routes.push({ route, clojure, methods, middlewares })
-  })
-  if (!action) {
-    action = ({ route, clojure, methods, middlewares }) => {
-      Route
-        .route(route, clojure, methods.toUpperCase().split(','))
-        .middleware(middlewares)
-    }
+    astriaRoutes = [...routes, ...wildcard]
+  },
+  get routes () {
+    return astriaRoutes
   }
-  routes.forEach(action)
-  wildcard.forEach(action)
 }

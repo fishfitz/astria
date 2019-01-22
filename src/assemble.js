@@ -36,6 +36,7 @@ module.exports = (path, mixins) => {
   }
 
   return {
+    ...page,
     middlewares: page.middlewares || [],
     clojure: async (...originals) => {
       const { request, params, auth, response } = originals[0]
@@ -88,13 +89,13 @@ module.exports = (path, mixins) => {
       }
 
       return page.handle({
+        ...originals[0],
         query,
         params,
         auth,
         files,
         request,
-        response,
-        originals
+        response
       })
     }
   }
