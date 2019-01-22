@@ -22,7 +22,7 @@ const collect = (folder) => {
 
 let astriaRoutes
 module.exports = {
-  async init ({ pagesFolder = 'App/Pages', mixinsFolder = 'App/Mixins', rulesFolder = 'App/Rules', action } = {}) {
+  async init ({ pagesFolder = 'app/Pages', mixinsFolder = 'app/Mixins', rulesFolder = 'app/Rules', action } = {}) {
     const validationsRules = await collect(path.join(rulesFolder, 'Validation'))
     validationsRules.forEach(v => {
       validations[path.basename(v).replace(path.extname(v), '')] = require(v)
