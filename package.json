@@ -1,5 +1,5 @@
 {
-  "name": "astria",
+  "name": "adonis-astria",
   "main": "./src/index.js",
   "version": "0.0.1",
   "author": "Cobaltway",
