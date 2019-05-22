@@ -38,7 +38,7 @@ module.exports = (path, mixins) => {
   return {
     ...page,
     middlewares: page.middlewares || [],
-    clojure: async (...originals) => {
+    clojure: async function (...originals) {
       const { request, params, auth, response } = originals[0]
 
       // Set headers
@@ -73,7 +73,7 @@ module.exports = (path, mixins) => {
           if (defaults[field]) {
             Object.keys(defaults[field]).forEach(k => {
               if (typeof input[field][k] === 'undefined') {
-                input[field][k] = sanitizor[camelCase(defaults[field][k])]()
+                input[field][k] = sanitizor[camelCase(defaults[field][k])].call({ ...originals[0] })
               }
             })
           }
