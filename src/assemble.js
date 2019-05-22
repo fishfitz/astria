@@ -71,11 +71,12 @@ module.exports = (path, mixins) => {
             Object.assign(input[field], sanitize(input[field], sanitizationRules[field]))
           }
           if (defaults[field]) {
-            Object.keys(defaults[field]).forEach(k => {
+            await Promise.all(Object.keys(defaults[field]).map(async k => {
               if (typeof input[field][k] === 'undefined') {
-                input[field][k] = sanitizor[camelCase(defaults[field][k])].call({ ...originals[0] })
+                const result = sanitizor[camelCase(defaults[field][k])].call({ ...originals[0] })
+                input[field][k] = result.then ? await result : result
               }
-            })
+            }))
           }
         }
       }))
