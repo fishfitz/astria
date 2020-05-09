@@ -89,8 +89,8 @@ module.exports = (path, mixins) => {
         })
       }
 	  
-	    context.query = query
-	    context.files = files
+      context.query = query
+      context.files = files
 
       return page.handle(context)
     }
