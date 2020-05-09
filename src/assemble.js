@@ -13,7 +13,7 @@ module.exports = (path, mixins) => {
     })
   }
 
-  const queryKeys = Object.keys(page.query || {});
+  const queryKeys = Object.keys(page.query || {})
   ['query', 'params'].forEach(field => {
     if (page[field]) {
       Object.keys(page[field]).forEach((key) => !page[field][key] && delete page[field][key])
@@ -38,8 +38,8 @@ module.exports = (path, mixins) => {
   return {
     ...page,
     middlewares: page.middlewares || [],
-    clojure: async function (...originals) {
-      const { request, params, auth, response } = originals[0]
+    clojure: async function (context) {
+      const { request, params, auth, response } = context
 
       // Set headers
       if (page.headers) {
@@ -64,7 +64,7 @@ module.exports = (path, mixins) => {
                   (validation.messages() || []).map(v => v.message).join('\n'))
               }
               if (typeof page[field + 'Error'] === 'object') throw page[field + 'Error']
-              if (typeof page[field + 'Error'] === 'function') return page[field + 'Error']({ query, params, auth, originals, validation })
+              if (typeof page[field + 'Error'] === 'function') return page[field + 'Error']({ query, params, auth, context, validation })
             }
           }
           if (sanitizationRules[field]) {
@@ -73,7 +73,7 @@ module.exports = (path, mixins) => {
           if (defaults[field]) {
             await Promise.all(Object.keys(defaults[field]).map(async k => {
               if (typeof input[field][k] === 'undefined') {
-                const result = sanitizor[camelCase(defaults[field][k])].call({ ...originals[0] })
+                const result = sanitizor[camelCase(defaults[field][k])].call({ ...context })
                 input[field][k] = result.then ? await result : result
               }
             }))
@@ -88,16 +88,11 @@ module.exports = (path, mixins) => {
           files[key] = request.file(key, page.files[key])
         })
       }
+	  
+	    context.query = query
+	    context.files = files
 
-      return page.handle({
-        ...originals[0],
-        query,
-        params,
-        auth,
-        files,
-        request,
-        response
-      })
+      return page.handle(context)
     }
   }
 }
