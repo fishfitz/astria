@@ -13,7 +13,7 @@ module.exports = (path, mixins) => {
     })
   }
 
-  const queryKeys = Object.keys(page.query || {})
+  const queryKeys = Object.keys(page.query || {});
   ['query', 'params'].forEach(field => {
     if (page[field]) {
       Object.keys(page[field]).forEach((key) => !page[field][key] && delete page[field][key])
