@@ -1,6 +1,6 @@
 const merge = (pageArray, mixinArray) => {
   if (!pageArray && !mixinArray) return undefined
-  return [...(mixinArray || {}), ...(pageArray || {})]
+  return {...(mixinArray || {}), ...(pageArray || {})}
 }
 
 module.exports = (page, mixin) => {
