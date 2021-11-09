@@ -35,7 +35,7 @@ module.exports = {
     const mixins = await collect(mixinsFolder)
     const mixinsMap = {}
     mixins.forEach(m => {
-      mixinsMap[path.dirname(path.relative(Helpers.appRoot(), m)).replace(/\\/g, '/')] = require(m)
+      mixinsMap[path.basename(m).replace(path.extname(m), '')] = require(m)
     })
 
     const pages = await collect(pagesFolder)
