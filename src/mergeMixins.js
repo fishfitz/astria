@@ -5,6 +5,8 @@ const merge = (pageArray, mixinArray) => {
 
 module.exports = (page, mixin) => {
   return {
+    ...(mixin || {}),
+    ...(page || {}),
     headers: merge(mixin.headers, page.headers),
     params: merge(mixin.params, page.params),
     paramsError: page.paramsError ? page.paramsError : mixin.paramsError,
