@@ -9,7 +9,7 @@ module.exports = (path, mixins) => {
   if (page.mixins) {
     if (!Array.isArray(page.mixins)) page.mixins = [page.mixins]
     page.mixins.forEach(m => {
-      page = merge(page, mixins(m))
+      page = merge(page, mixins[m])
     })
   }
 
