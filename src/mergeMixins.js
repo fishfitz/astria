@@ -14,9 +14,9 @@ module.exports = (page, mixin) => {
     queryError: page.queryError ? page.queryError : mixin.queryError,
     files: merge(mixin.files, page.files),
     handle (...params) {
-      if (mixin.handle && !page.handle) return mixin.handle(...params)
-      if (mixin.handle) mixin.handle(...params)
-      return page.handle(...params)
+      if (mixin.handle && !page.handle) return mixin.handle.call(this, ...params)
+      if (mixin.handle) mixin.call(this, ...params)
+      return page.handle.call(this, ...params)
     }
   }
 }
